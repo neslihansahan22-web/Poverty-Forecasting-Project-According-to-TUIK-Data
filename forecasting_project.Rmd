@@ -4,10 +4,10 @@
 Project Title:Empirical Forecasting of Poverty and Living Conditions in Turkey: A Time Series Analysis using TÜİK Data
 
 
-## 2. Student Information
+## 2. Author Information
 Name & Surname:Neslihan Şahan
-Department:Management Information Systems (MIS), Marmara University
-Course / Project Status:Time Series Forecasting Assignment (3rd Year Portfolio)
+Department: Management Information Systems (MIS), Marmara University
+Course / Project Status: Quantiative Analysis for Desicion Making
 
 
 ## 3. TÜİK Data Source Information
