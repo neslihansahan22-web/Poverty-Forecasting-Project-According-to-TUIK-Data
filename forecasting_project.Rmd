@@ -28,7 +28,6 @@ poverty_table <- tables_7 %>%
   filter(node_type == "istab") %>%
   filter(grepl("Poverty and Living Conditions", table_name, ignore.case = TRUE))
   
-  
 ## 5.Use of TÜİK Data in R
 
 library(httr)
