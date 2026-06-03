@@ -1,0 +1,227 @@
+# TÜİK oturumu oluştur
+> session <- httr::handle("https://veriportali.tuik.gov.tr")
+GET(
+"https://veriportali.tuik.gov.tr",
+handle = session
+)
+
+> tables_7 <- statistical_tables("7")
+tables_7 %>%
+select(table_name, table_url) %>%
+print(n = Inf)
+poverty_table <- tables_7 %>%
+filter(node_type == "istab") %>%
+filter(
+grepl(
+"Poverty and Living Conditions",
+table_name,
+ignore.case = TRUE
+)
+)
+library(httr)
+library(readxl)
+install.packages("readxl")
+library(readxl)
+install.packages("readxl", repos = "https://cloud.r-project.org")
+library(tuikr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(forecast)
+library(TTR)
+install.packages("TTR")
+library(TTR)
+
+
+
+# ÖNEMLİ: Önce ana sayfayı ziyaret et, yoksa Access Denied verir
+> session <- httr::handle("https://veriportali.tuik.gov.tr")
+GET("https://veriportali.tuik.gov.tr", handle = session)
+# Dosyayı indir
+>tmp <- tempfile(fileext = ".xls")
+GET(
+url,
+handle = session,
+write_disk(tmp, overwrite = TRUE),
+add_headers(
+"User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+"Referer" = "https://veriportali.tuik.gov.tr"
+)
+)
+
+> url <- tables_7 %>%
++     filter(!is.na(table_url)) %>%
++     slice(183) %>%
++     pull(url)
+library(httr)
+)
+# Verileri okuma  
+url <- tables_7 %>%
+filter(!is.na(table_url)) %>%
+slice(183) %>%
+pull(table_url)
+table_statistics <- read_xls(tmp)
+View(table_statistics)
+names(table_statistics)
+summary(table_statistics)
+colSums(is.na(table_statistics))
+str(table_statistics)
+
+# 1. Tablonun adını 'poverty_table' olarak tanımladık (Görseldeki sekmeye göre)
+table_poverty <- tables_7
+# 2. Sadece "Medyan gelirin %50'sine göre" olan "Yoksulluk oranı (%)" satırını filtrele
+# (Görselinde 12. satıra denk gelen veri serisi)
+row_poverty <- poverty_table[12, ]
+# 3. Yıllara ait olan sayısal değerleri satırdan ayıkla ve düz bir vektör yap
+# (İlk 3 sütun metin başlığı olduğu için 4. sütundan sonrasını alıyoruz)
+poverty_rate_veri <- as.numeric(row_poverty[, 4:ncol(row_poverty)])
+# 4. Zaman serisi nesnesini oluştur (Artık hata vermeyecek)
+poverty_rate_re <- ts(
+poverty_rate_veri,
+start = 2006,
+frequency = 1
+)
+# 5. Kontrol et
+plot(poverty_rate_re, main="Yoksulluk Oranı (2006-2025)", ylab="%", xlab="Yıl")
+poverty_row <- tables_7[12, ]
+clean_values <- na.omit(as.numeric(poverty_row))
+poverty_rate_re <- ts(clean_values, start = 2006, frequency = 1)
+print(poverty_rate_re)
+poverty_rate_re <- ts(
+poverty_rate_veri,
+start = 2006,
+frequency = 1
+)
+
+> autoplot(poverty_rate_re)
+accuracy_metrics <- function(actual, forecast){
+error <- actual - forecast
+bias <- mean(error, na.rm=TRUE)
+mad <- mean(abs(error), na.rm=TRUE)
+mse <- mean(error^2, na.rm=TRUE)
+mape <- mean(abs(error/actual)*100, na.rm=TRUE)
+rsfe <- sum(error, na.rm=TRUE)
+tracking_signal <- rsfe / mad
+data.frame(
+Bias = bias,
+MAD = mad,
+MSE = mse,
+MAPE = mape,
+RSFE = rsfe,
+Tracking_Signal = tracking_signal
+)
+}
+
+#Naive ve Trend modellerini kur 
+
+naive_model1 <- naive(poverty_rate_re)
+naive_forecast <- fitted(naive_model)
+naive_accuracy <- accuracy_metrics(
+poverty_rate_re[-1],
+naive_forecast[-1]
+)
+
+autoplot(poverty_rate_re)+
+autolayer(naive_forecast)
+
+# Moving Avarage 
+ma3 <- stats::filter(
+poverty_rate_re,
+rep(1/3,3),
+sides=1
+)
+wma <- TTR::WMA(
+poverty_rate_re,
+n=3,
+wts=c(0.2,0.3,0.5)
+)
+# A 3-period moving average was selected because the annual series contains only twenty observations.
+
+# Simple Exponential Smoothing
+ses_model <- ses(
+poverty_rate_re,
+h=1
+)
+ses_model$model$par
+
+# Trend Adjusted ES
+holt_model <- holt(
+poverty_rate_re,
+h=1
+)
+holt_model$model$par
+
+
+#Additive decomposition requires a seasonal structure. The selected annual series has frequency one and therefore decomposition is not meaningful.
+#Seasonal dummy variables cannot be constructed because the data frequency is annual.
+write.csv(
+accuracy_table,
+"outputs/tables/accuracy_comparison.csv",
+row.names = FALSE
+)
+forecast_2026
+final_forecast <- data.frame(
+Superior_Method = "...",
+Data_Access_Date = "2025-05",
+Latest_Observation = "2025",
+Forecast_Target = "2026",
+Forecast_Value = forecast_2026
+)
+# 1. Eksik olan 'outputs/tables' klasörünü bilgisayarında oluşturur
+dir.create("outputs/tables", recursive = TRUE, showWarnings = FALSE)
+# 2. Tabloyu CSV olarak o klasörün içine kaydeder
+write.csv(accuracy_table, "outputs/tables/accuracy_comparison.csv", row.names = FALSE)
+# 1. Klasörü oluştur
+dir.create("outputs/tables", recursive = TRUE, showWarnings = FALSE)
+# 2. Naive ve Trend modelleri için gerçek verileri ve tahminleri eşitle
+# (Uzunlukların çakışmaması için Naive modelde ilk gözlemi eliyoruz)
+gercek_naive  <- as.numeric(poverty_rate_re[-1])
+tahmin_naive  <- as.numeric(naive_forecast[-1])
+gercek_trend  <- as.numeric(poverty_rate_re)
+tahmin_trend  <- as.numeric(trend_model$fitted.values)
+# 3. Metrikleri hesaplayan yardımcı bir fonksiyon tanımlayalım
+hesapla_metrikler <- function(actual, forecast) {
+errors <- actual - forecast
+n <- length(errors)
+bias <- mean(errors)
+mad  <- mean(abs(errors))
+mse  <- mean(errors^2)
+mape <- mean(abs(errors) / actual) * 100
+rsfe <- sum(errors)
+ts   <- rsfe / mad
+return(c(Bias=bias, MAD=mad, MSE=mse, MAPE=mape, RSFE=rsfe, Tracking_Signal=ts))
+}
+# 4. İki model için de metrikleri çalıştır
+metrics_naive <- hesapla_metrikler(gercek_naive, tahmin_naive)
+metrics_trend <- hesapla_metrikler(gercek_trend, tahmin_trend)
+# 5.tabloyu oluştur
+accuracy_table <- data.frame(
+Method          = c("Naive Model", "Trend Model"),
+Bias            = c(metrics_naive["Bias"], metrics_trend["Bias"]),
+MAD             = c(metrics_naive["MAD"], metrics_trend["MAD"]),
+MSE             = c(metrics_naive["MSE"], metrics_trend["MSE"]),
+MAPE            = c(metrics_naive["MAPE"], metrics_trend["MAPE"]),
+RSFE            = c(metrics_naive["RSFE"], metrics_trend["RSFE"]),
+Tracking_Signal = c(metrics_naive["Tracking_Signal"], metrics_trend["Tracking_Signal"])
+)
+# 6. Tabloyu CSV olarak dışa aktar
+write.csv(accuracy_table, "outputs/tables/accuracy_comparison.csv", row.names = FALSE)
+# Tabloyu ekranda göster
+print(accuracy_table)
+View(accuracy_table)
+# 1. Kazanan model olan Trend Modeli ile 2026 yılı tahmini değerini (forecast_2026) üretiyoruz
+new_year <- length(poverty_rate_re) + 1
+forecast_2026 <- predict(trend_model, newdata = data.frame(year_index = new_year))
+# Ödev gerekliliğine göre sadece sayısal değeri almak için ismini temizliyoruz
+forecast_2026 <- as.numeric(forecast_2026)
+# 2. Hocanın istediği o final tablosunu eksiksiz oluşturuyoruz
+final_forecast <- data.frame(
+Superior_Method    = "Trend Model",
+Data_Access_Date   = "2026-06", # Bugünün tarihi
+Latest_Observation = "2025",
+Forecast_Target    = "2026",
+Forecast_Value     = forecast_2026
+)
+# 3. Tabloyu kontrol etmek için ekrana yazdırıyoruz
+print(final_forecast)
+savehistory("~/poverty_forecasting_project/forecasting_project.Rhistory")
