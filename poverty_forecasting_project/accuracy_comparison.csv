@@ -1,4 +1,0 @@
-> print( accuracy_table)
-Method          Bias       MAD       MSE     MAPE          RSFE Tracking_Signal
-1 Naive Model -2.197529e-01 0.4871765 0.3458358 3.351212 -3.735800e+00   -7.668269e+00
-2 Trend Model -1.757853e-16 0.4812996 0.3323021 3.258043 -3.552714e-15   -7.381502e-15
